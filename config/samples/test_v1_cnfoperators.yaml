@@ -1,0 +1,7 @@
+apiVersion: test.cnf.operators.com/v1
+kind: Cnfoperators
+metadata:
+  name: cnfoperators-sample
+spec:
+  CSVName : "axyom"
+  OperatorNameSpace : "default"

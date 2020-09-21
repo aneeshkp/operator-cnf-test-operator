@@ -1,0 +1,24 @@
+# permissions for end users to edit cnfoperators.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cnfoperators-editor-role
+rules:
+- apiGroups:
+  - test.cnf.operators.com
+  resources:
+  - cnfoperators
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - test.cnf.operators.com
+  resources:
+  - cnfoperators/status
+  verbs:
+  - get
