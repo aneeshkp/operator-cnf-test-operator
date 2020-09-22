@@ -36,11 +36,15 @@ spec:
         spec:
           description: CnfoperatorsSpec defines the desired state of Cnfoperators
           properties:
+            CRNamespace:
+              type: string
             csvname:
               description: Foo is an example field of Cnfoperators. Edit Cnfoperators_types.go
                 to remove/update
               type: string
-            namespace:
+            csvnamespace:
+              type: string
+            operatornamespace:
               type: string
           type: object
         status:

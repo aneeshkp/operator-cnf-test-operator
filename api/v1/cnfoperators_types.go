@@ -30,7 +30,9 @@ type CnfoperatorsSpec struct {
 
 	// Foo is an example field of Cnfoperators. Edit Cnfoperators_types.go to remove/update
 	CSVName           string `json:"csvname,omitempty"`
-	OperatorNameSpace string `json:"namespace,omitempty"`
+	OperatorNamespace string `json:"operatornamespace,omitempty"`
+	CRNamespace       string `json:"CRNamespace,omitempty"`
+	CSVNamespace      string `json:"csvnamespace,omitempty"`
 }
 
 type ObjectStatus string

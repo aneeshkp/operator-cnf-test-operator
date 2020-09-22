@@ -3,5 +3,8 @@ kind: Cnfoperators
 metadata:
   name: cnfoperators-sample
 spec:
-  CSVName : "axyom"
-  OperatorNameSpace : "default"
+  CSVName : "etcdoperator.v0.9.4"
+  CSVNamespace : "my-etcd"
+  CRNamespace: "default"
+  OperatorNamespace: "operator-cnf-test-operator-system"
+

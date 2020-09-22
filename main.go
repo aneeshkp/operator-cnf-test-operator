@@ -42,6 +42,7 @@ func init() {
 
 	utilruntime.Must(testv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+
 }
 
 func main() {
@@ -69,6 +70,7 @@ func main() {
 
 	if err = (&controllers.CnfoperatorsReconciler{
 		Client: mgr.GetClient(),
+		Config: mgr.GetConfig(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Cnfoperators"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
