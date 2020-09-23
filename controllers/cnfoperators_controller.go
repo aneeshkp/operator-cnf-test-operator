@@ -49,6 +49,11 @@ var csvInstance *v1alpha1.ClusterServiceVersion
 
 // +kubebuilder:rbac:groups=test.cnf.operators.com,resources=cnfoperators,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=test.cnf.operators.com,resources=cnfoperators/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=operators.coreos.com,resources=clusterserviceversions,verbs=get;list;watch
+// +kubebuilder:rbac:groups=operators.coreos.com,resources=clusterserviceversions/status,verbs=get
+// +kubebuilder:rbac:groups="",resources=pods;services;endpoints;deployment;configmaps;daemonset;nodes,verbs=get;list
+// +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=get;list
+// +kubebuilder:rbac:groups="*",resources="*",verbs=watch;get;list
 
 func (r *CnfoperatorsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
@@ -67,45 +72,63 @@ func (r *CnfoperatorsReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	r.Log.Info("The CRD what we found is ", "CRD", cnfOperator)
+	r.Log.Info("The Name of the CRD is ", "Name", cnfOperator.Name)
+	r.Log.Info("The PCSV of the CRD is ", "Name", cnfOperator.Spec.CSVName)
 	// reset all status
 	initStatus(cnfOperator)
 	//func (r *CnfoperatorsReconciler) getCSV(namespace string, name string, group string, version string, resource string) (e error, csv *v1alpha1.ClusterServiceVersion) {
 	if err, csvInstance = r.getCSV(cnfOperator.Spec.CSVNamespace, cnfOperator.Spec.CSVName, v1alpha1.GroupName, v1alpha1.GroupVersion, "clusterserviceversions"); err != nil {
-		//if err = loadCSV(r.Client, cnfOperator); err != nil {
 		r.Log.Error(err, "Error Loading CSV files")
-		r.Log.Info("Error Loading csv")
 		cnfOperator.Status.CSV.Name = cnfOperator.Spec.CSVName
-		csvResult := testv1.TestResult{}
-		csvResult.Type = "CSV"
 		if errors.IsNotFound(err) {
-			csvResult.Status = testv1.ObjectStatusNotFound
+			cnfOperator.Status.CSV.Status = "Not Found"
 		} else {
-			csvResult.Status = testv1.ObjectStatusError
+			cnfOperator.Status.CSV.Status = "Error"
 		}
-		csvResult.Name = cnfOperator.Spec.CSVName
-		cnfOperator.Status.CSV = csvResult
-		r.Log.Info("Updtaing status ")
-		err = r.Client.Status().Update(context.Background(), cnfOperator)
+		cnfOperator.Status.CSV.Name = cnfOperator.Spec.CSVName
+		r.Log.Info("Updating status ")
+		errStatusUpdate := r.Client.Status().Update(context.Background(), cnfOperator)
 		if err != nil {
-			r.Log.Error(err, "Updating status err")
+			r.Log.Error(errStatusUpdate, "Updating status err")
 		}
 		return reconcile.Result{}, err
-	}
+	} else {
+		cnfOperator.Status.CSV.Name = cnfOperator.Spec.CSVName
+		cnfOperator.Status.CSV.Status = csvInstance.Status.Phase
+		var rStatus []v1alpha1.RequirementStatus
+		for _, value := range csvInstance.Status.RequirementStatus {
+			if value.Status != v1alpha1.RequirementStatusReasonPresent &&
+				value.Status != v1alpha1.DependentStatusReasonSatisfied {
+				rStatus = append(rStatus, value)
+			}
+		}
+		cnfOperator.Status.CSV.CSVRequirementStatus = rStatus
+		r.Log.Info("Updating status ")
+		errStatusUpdate := r.Client.Status().Update(context.Background(), cnfOperator)
 
+		if err != nil {
+			r.Log.Error(errStatusUpdate, "Updating status err")
+			return reconcile.Result{}, errStatusUpdate
+		}
+
+	}
+	// Check for owned CRDS
 	if len(csvInstance.Spec.CustomResourceDefinitions.Owned) > 0 {
 		for _, owned := range csvInstance.Spec.CustomResourceDefinitions.Owned {
 			parts := strings.SplitN(owned.Name, ".", 2)
 			e, name := r.getCrdInstance(cnfOperator.Spec.CRNamespace, owned.Name, parts[1], owned.Version, parts[0])
 			if e == nil {
 				cnfOperator.Status.CRDS[parts[0]] = name
+			} else {
+				cnfOperator.Status.CRDS[parts[0]] = e.Error()
 			}
-
 		}
+		r.Log.Info("Updating CRD status")
 		err = r.Client.Status().Update(context.Background(), cnfOperator)
 		if err != nil {
 			r.Log.Error(err, "Updating status err")
 		}
-
 	}
 
 	return ctrl.Result{}, nil
@@ -130,7 +153,7 @@ func loadCSV(rclient client.Client, instance *testv1.Cnfoperators) (err error) {
 }
 func initStatus(cnfOperator *testv1.Cnfoperators) {
 	status := testv1.CnfoperatorsStatus{}
-	status.CSV = testv1.TestResult{Name: "", Type: "CSV", Status: ""}
+	status.CSV = testv1.CSVTestResult{Name: "", Type: "CSV", Status: ""}
 	status.CRDS = make(map[string]string)
 	status.Deployment = testv1.TestResult{Name: "", Type: "deployment", Status: ""}
 	status.Operators = testv1.TestResult{Name: "", Type: "Operators", Status: ""}
@@ -165,11 +188,9 @@ func (r *CnfoperatorsReconciler) getCSV(namespace string, name string, group str
 
 	//unCsv, errCrd := crdClient.Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if errCrd != nil {
-		r.Log.Error(errCrd, "Error getting CRD %v")
+		r.Log.Error(errCrd, "Error getting CRD")
 		return
 	}
-	r.Log.Info("Got CRD: ")
-	r.Log.Info("Got CRD: %v", csv)
 	//unstructured := unCsv.UnstructuredContent()
 	//runtime.DefaultUnstructuredConverter.FromUnstructured(unstructured, &csv)
 	//	crd, errCrd := crdClient.Namespace("openshift-machine-api").List( metav1.ListOptions{})
@@ -189,14 +210,17 @@ func (r *CnfoperatorsReconciler) getCrdInstance(namespace string, name string, g
 		return errClient, ""
 	}
 	crdClient := dynClient.Resource(customGVR)
-
-	crd, errCrd := crdClient.Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	r.Log.Info("Reading following CR ", "Name", name, "resource", resource, "Group", group, "version", version)
+	crd, errCrd := crdClient.Namespace(namespace).List(context.Background(), metav1.ListOptions{})
+	//crd, errCrd := crdClient.Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	//	crd, errCrd := crdClient.Namespace("openshift-machine-api").List( metav1.ListOptions{})
-
-	if errCrd != nil {
-
-		r.Log.Error(errCrd, "Error getting CRD %v")
+	if errCrd != nil || len(crd.Items) < 1 {
+		r.Log.Error(errCrd, "Error getting CRD")
+		return errCrd, ""
 	}
-	r.Log.Info("Got CRD: %v", crd)
-	return errCrd, crd.GetName()
+	r.Log.Info("Got CRD ", "name", crd.Items[0].GetName())
+
+	return errCrd, crd.Items[0].GetName()
 }
+
+//requirementStatus:

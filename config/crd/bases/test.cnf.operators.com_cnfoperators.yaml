@@ -36,7 +36,7 @@ spec:
         spec:
           description: CnfoperatorsSpec defines the desired state of Cnfoperators
           properties:
-            CRNamespace:
+            crnamespace:
               type: string
             csvname:
               description: Foo is an example field of Cnfoperators. Edit Cnfoperators_types.go
@@ -59,9 +59,65 @@ spec:
                 of cluster Important: Run "make" to regenerate code after modifying
                 this file'
               properties:
+                csvrequirementstatus:
+                  items:
+                    properties:
+                      dependents:
+                        items:
+                          description: DependentStatus is the status for a dependent
+                            requirement (to prevent infinite nesting)
+                          properties:
+                            group:
+                              type: string
+                            kind:
+                              type: string
+                            message:
+                              type: string
+                            status:
+                              description: StatusReason is a camelcased reason for
+                                the status of a RequirementStatus or DependentStatus
+                              type: string
+                            uuid:
+                              type: string
+                            version:
+                              type: string
+                          required:
+                          - group
+                          - kind
+                          - status
+                          - version
+                          type: object
+                        type: array
+                      group:
+                        type: string
+                      kind:
+                        type: string
+                      message:
+                        type: string
+                      name:
+                        type: string
+                      status:
+                        description: StatusReason is a camelcased reason for the status
+                          of a RequirementStatus or DependentStatus
+                        type: string
+                      uuid:
+                        type: string
+                      version:
+                        type: string
+                    required:
+                    - group
+                    - kind
+                    - message
+                    - name
+                    - status
+                    - version
+                    type: object
+                  type: array
                 name:
                   type: string
                 status:
+                  description: ClusterServiceVersionPhase is a label for the condition
+                    of a ClusterServiceVersion at the current time.
                   type: string
                 type:
                   type: string

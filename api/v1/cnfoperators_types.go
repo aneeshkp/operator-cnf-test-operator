@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	v1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,7 +32,7 @@ type CnfoperatorsSpec struct {
 	// Foo is an example field of Cnfoperators. Edit Cnfoperators_types.go to remove/update
 	CSVName           string `json:"csvname,omitempty"`
 	OperatorNamespace string `json:"operatornamespace,omitempty"`
-	CRNamespace       string `json:"CRNamespace,omitempty"`
+	CRNamespace       string `json:"crnamespace,omitempty"`
 	CSVNamespace      string `json:"csvnamespace,omitempty"`
 }
 
@@ -39,9 +40,23 @@ type ObjectStatus string
 
 // Const for ObjectStatus
 const (
-	ObjectStatusNotFound ObjectStatus = "NotFound"
-	ObjectStatusRunning               = "Running"
-	ObjectStatusError                 = "Error"
+	ObjectStatusAny                       = ""
+	ObjectStatusNotFound     ObjectStatus = "NotFound"
+	ObjectStatusRunning      ObjectStatus = "Running"
+	ObjectStatusError        ObjectStatus = "Error"
+	ObjectStatusPending      ObjectStatus = "Pending"
+	ObjectStatusInstallReady ObjectStatus = "InstallReady"
+	ObjectStatusInstalling   ObjectStatus = "Installing"
+
+	ObjectStatusSucceeded ObjectStatus = "Succeeded"
+
+	ObjectStatusFailed ObjectStatus = "Failed"
+
+	ObjectStatusUnknown ObjectStatus = "Unknown"
+
+	ObjectStatusReplacing ObjectStatus = "Replacing"
+
+	ObjectStatusDeleting ObjectStatus = "Deleting"
 )
 
 type TestResult struct {
@@ -49,12 +64,18 @@ type TestResult struct {
 	Name   string       `json:"name,omitempty"`
 	Status ObjectStatus `json:"status,omitempty"`
 }
+type CSVTestResult struct {
+	Type                 string                              `json:"type,omitempty"`
+	Name                 string                              `json:"name,omitempty"`
+	Status               v1alpha1.ClusterServiceVersionPhase `json:"status,omitempty"`
+	CSVRequirementStatus []v1alpha1.RequirementStatus        `json:"csvrequirementstatus,omitempty"`
+}
 
 // CnfoperatorsStatus defines the observed state of Cnfoperators
 type CnfoperatorsStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	CSV        TestResult        `json:"csv"`
+	CSV        CSVTestResult     `json:"csv"`
 	Deployment TestResult        `json:"deployment"`
 	Operators  TestResult        `json:"operators"`
 	Operands   []TestResult      `json:"operands"`

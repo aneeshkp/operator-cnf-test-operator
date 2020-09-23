@@ -3,8 +3,8 @@ kind: Cnfoperators
 metadata:
   name: cnfoperators-sample
 spec:
-  CSVName : "etcdoperator.v0.9.4"
-  CSVNamespace : "my-etcd"
-  CRNamespace: "default"
-  OperatorNamespace: "operator-cnf-test-operator-system"
+  csvname : "etcdoperator.v0.9.4"
+  csvnamespace : "my-etcd"
+  crnaamespace: "default"
+  operatornamespace: "operator-cnf-test-operator-system"
 
